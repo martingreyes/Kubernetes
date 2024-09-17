@@ -1,0 +1,15 @@
+kubectl cp /home/ubuntu/caso3/google-mobility.sql db-sts-0:/docker-entrypoint-initdb.d/google-mobility.sql -c wp-sitio-db -n martingreyes-dev
+
+kubectl get svc,sts,pvc,deploy,pod,cm,ingress
+
+kubectl apply -f db-sts.yaml
+
+kubectl delete sts db-sts
+
+kubectl get events
+
+k describe pod uptimekuma-0
+
+kubectl exec -it db-sts-0 -c wp-sitio-db -n martingreyes-dev -- /bin/sh
+
+kubectl exec db-sts-0 -it -- mysql -u root -p

@@ -1,0 +1,34 @@
+{
+  "port": 3000,
+  "webAppDirectory": "webapp",
+  "writeLogs": true,
+  "noUpload": false,
+  "scanOptions": {
+    "skipImg": false,
+    "scanInterval": 1.5,
+    "pause": 50,
+    "saveInterval": 500,
+    "bootScanDelay": 15
+  },
+  "storage": {
+    "albumArtDirectory": "/config/album-art",
+    "dbDirectory": "/config/db",
+    "logsDirectory": "/config/logs"
+  },
+  "folders": {
+    "library": {
+      "root": "/music"
+    }
+  },
+  "secret": "9VCWftzDNVon6U8btd1oMJj5YG1WwFtZ4hXrEn/Ilk7Xpb3GnNuFu7BSKCXyoj4cVNvx7S+z0CnWwCUQLC7VJQBqGsehbysHi6gBCyYv/ZHs8NT6MjevR1ftGTVM/VT0XAGuwwLh0/VXV+uoDXrUKqMi3Xj3etrlkeXLEmlKQtc=",
+  "users": {
+    "admin": {
+      "vpaths": [
+        "library"
+      ],
+      "password": "/evGyYUA5qyutEdafH0vqa0r2s6+yb2YM8j577yd75I=",
+      "salt": "96asCvYWkJ8x+QOwDIgeuQ==",
+      "admin": true
+    }
+  }
+}

@@ -1,0 +1,42 @@
+Comandos Caso 2:
+
+* Unicamente desde el Bastion tengo acceso a las VM DB, Metabase y LoadBalancer
+
+VM DB:
+
+Diapo 26
+
+CREATE DATABASE dataset;
+CREATE USER 'dataset' IDENTIFIED BY 'teledataset';
+GRANT ALL PRIVILEGES ON dataset.* TO 'dataset';
+GRANT RELOAD ON . TO 'dataset';
+FLUSH PRIVILEGES;
+exit;
+
+scp ~/google-mobility.sql.gz ubuntu@ip_database:/home/ubuntu
+
+gunzip < google-mobility.sql.gz | sudo mysql -u root metabase
+
+VM Metabase:
+
+sudo apt update
+sudo apt install default-jre
+mkdir ~/metabase
+cd metabase
+wget https://downloads.metabase.com/v0.46.4/metabase.jar
+java -jar metabase.jar
+
+VM LoadBalancer
+
+Diapo 29
+
+server {
+listen 80;
+location / {
+proxy_pass http://<ip de tu metabase>:3000; # my backend
+}
+}
+
+Ver en el navegador: http://ip_flotante_loadbalacer
+
+Ya en la pagina de metabase cargar mediante interfaz grafica la BD (user: dataset, nombre db: dataset, psw: teledataset, host: ip de la vm db)

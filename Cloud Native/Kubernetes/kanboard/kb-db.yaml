@@ -1,0 +1,121 @@
+# https://kanboard.org
+# https://docs.kanboard.org/v1/admin/docker/
+---
+#T* Secret
+apiVersion: v1
+data:
+  MYSQL_ROOT_PASSWORD: c2VjcmV0aXNpbW8=
+  MYSQL_PASSWORD: Y205dmRBPT0=
+  DATABASE_URL: bXlzcWw6Ly9rYW5ib2FyZDpzZWNyZXRpc2ltb0BrYi1kYi1zZXJ2aWNlOjMzMDYva2FuYm9hcmQ=
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: kb-db-secret
+---
+#T* ConfigMap de variables
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kb-db-cm
+data:
+  MYSQL_DATABASE: kanboard
+  MYSQL_USER: kanboard
+---
+#T* Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: kb-db-service
+  labels:
+    app: kb-db
+
+spec:
+  selector:
+    app: kb-db
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+---
+#T* StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kb-db-sts
+  labels:
+    app: kb-db
+
+spec:
+  serviceName: kb-db-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kb-db
+  
+  template:
+    metadata:
+      generateName: kb-db
+      labels:
+        app: kb-db
+  
+    spec:
+      initContainers:
+      - name: "remove-lost-found"
+        image: "busybox:1.25.0"
+        imagePullPolicy: "IfNotPresent"
+        command:  ["rm", "-fr", "/var/lib/mysql/lost+found"]
+        volumeMounts:
+          - name: mariadb-data
+            mountPath: /var/lib/mysql
+      
+      #! Container principal.
+      containers:
+        - name: kb-db
+          image: mariadb:latest
+          imagePullPolicy: IfNotPresent
+          resources: {}
+          ports:
+            - containerPort: 3306
+              name: kb-db
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: kb-db-cm
+                  key: MYSQL_DATABASE
+            
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: kb-db-cm
+                  key: MYSQL_USER
+            
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kb-db-secret
+                  key: MYSQL_ROOT_PASSWORD
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kb-db-secret
+                  key: MYSQL_PASSWORD
+          
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+            
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 250Mi
+    
+
+status: 
+  replicas: 1

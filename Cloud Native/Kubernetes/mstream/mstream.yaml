@@ -1,0 +1,163 @@
+# https://hub.docker.com/r/linuxserver/mstream
+
+---
+#T* ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mstream-cm
+
+data:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: "Etc/AR"
+
+---
+#T* Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mstream-service 
+  labels:
+    app: mstream 
+
+spec:
+  selector:
+    app: mstream
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+
+---
+#T* Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+  name: mstream-ingress
+
+spec:
+  rules:
+  - host: reyes2.my.kube.um.edu.ar
+    http:
+      paths:
+      - backend:
+          service:
+            name: mstream-service
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+
+---
+#T* StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mstream-sts
+  labels:
+    app: mstream
+
+spec:
+  serviceName: mstream-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mstream
+  
+  template:
+    metadata:
+      generateName: mstream
+      labels:
+        app: mstream
+  
+    spec:
+      initContainers:
+        - name: init-and-download
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - |
+              rm -rf /music/lost+found;
+              wget -O /music/Child-Dreams.mp3 'https://drive.google.com/uc?id=1El9NCEjvWxM60_RTcB2vvj8P76w4o5qF&export=download';
+              wget -O /music/Brendan_Kinsella_-_02_-_Bach_-_Aria_Variata_BVW_989_-_Variation_No_2.mp3 'https://drive.google.com/uc?id=10_XTa6gU1NscAwSKW7_khY0owRqE728_&export=download'
+          volumeMounts:
+            - name: music-volume
+              mountPath: /music
+
+
+      containers:
+        - name: mstream
+          image: lscr.io/linuxserver/mstream:latest
+          imagePullPolicy: IfNotPresent
+          resources: {}
+        
+          ports:
+            - containerPort: 3000
+              name: mstream
+    
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: mstream-cm
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: mstream-cm
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: mstream-cm
+                  key: TZ
+            
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+
+            - name: music-volume
+              mountPath: /music
+
+  volumeClaimTemplates:
+    - metadata:
+        name: config-volume
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 100Mi
+    
+    - metadata:
+        name: music-volume
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 500Mi
+
+status: 
+  replicas: 1
+
+#! Si los .mp3 fueran mas livianos como los Free-Test... podria hacer:
+# kubectl cp Free_Test_Data_100KB_MP3.mp3 mstream-sts-0:/music
+# kubectl cp Free_Test_Data_500KB_MP3.mp3 mstream-sts-0:/music
+
+# Links de descarga directa generados desde mi google drive con el abrir con Link Generator for Drive
+# https://drive.google.com/uc?id=1El9NCEjvWxM60_RTcB2vvj8P76w4o5qF&export=download
+# https://drive.google.com/uc?id=10_XTa6gU1NscAwSKW7_khY0owRqE728_&export=download
+
+# TODO A esto lo podria meter dentro del init container
+# Para habilitar subir archivos desde el navegador:
+# 1. Copiar el archivo a tu máquina local: Usa kubectl cp para copiar el archivo del pod a tu máquina local:
+# kubectl cp mstream-sts-0:/config/config.json ./config.json
+# 2. Editar el archivo en tu máquina
+# "noUpload": false
+# 3. Volver a copiar el archivo al contenedor
+# kubectl cp ./config.json mstream-sts-0:/config/config.json
+

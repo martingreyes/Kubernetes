@@ -1,0 +1,89 @@
+# https://github.com/louislam/uptime-kuma
+# https://fintechsolutions.io
+# https://soypip.com
+# ---
+#T* StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: uptime-kuma-sts
+  labels:
+    app: uptime-kuma
+
+spec:
+  serviceName: uptime-kuma-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptime-kuma
+  
+  template:
+    metadata:
+      generateName: uptime-kuma
+      labels:
+        app: uptime-kuma
+  
+    spec:
+      containers:
+        - name: uptime-kuma
+          image: louislam/uptime-kuma:1
+          imagePullPolicy: IfNotPresent
+          resources: {}
+        
+          ports:
+            - containerPort: 3001
+              name: uptime-kuma
+    
+          volumeMounts:
+            - name: data 
+              mountPath: /app/data
+            
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 100Mi
+status: 
+  replicas: 1
+---
+#T* Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: uptime-kuma-service
+  labels:
+    app: uptime-kuma
+spec:
+  selector:
+    app: uptime-kuma
+  ports:
+  - protocol: TCP
+    port: 3001 
+    targetPort: 3001
+---
+#T* Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+  name: uptime-kuma-ingress
+spec:
+  rules:
+  - host: reyes.my.kube.um.edu.ar
+    http:
+      paths:
+      - backend:
+          service:
+            name: uptime-kuma-service 
+            port:
+              number: 3001 
+        path: /
+        pathType: Prefix
+
+#Username: Martin
+#Passowrd: a12345678

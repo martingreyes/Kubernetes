@@ -1,0 +1,89 @@
+# https://kanboard.org
+# https://docs.kanboard.org/v1/admin/docker/
+---
+#T* Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+  name: kb-ingress
+
+spec:
+  rules:
+  - host: reyes0.my.kube.um.edu.ar
+    http:
+      paths:
+      - backend:
+          service:
+            name: kb-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+
+---
+#T* Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: kb-service
+  labels:
+    app: kb
+
+spec:
+  selector:
+    app: kb
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+#T* Deployment
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: kb-deploy
+  labels:
+    app: kb
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kb
+
+  template:
+    metadata:
+      labels:
+        app: kb
+
+    spec:
+      containers:
+        - name: kb
+          image: kanboard/kanboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: DB_DRIVER
+              value: "mysql"
+            - name: DB_HOSTNAME
+              value: kb-db-service
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: kb-db-cm
+                  key: MYSQL_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kb-db-secret
+                  key: MYSQL_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: kb-db-cm
+                  key: MYSQL_DATABASE
